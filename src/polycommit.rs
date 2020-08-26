@@ -19,6 +19,15 @@ pub struct OpeningProof<C: CurveAffine> {
     z2: C::Scalar,
 }
 
+/// TODO: documentation
+#[derive(Debug)]
+pub struct Accumulator<C: CurveAffine> {
+    /// TODO: documentation. comes from circuit
+    pub g_new: Vec<C>,
+    /// TODO: documentation. comes from circuit
+    pub challenges_sq_packed_new: Vec<C::Scalar>,
+}
+
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
 pub struct Params<C: CurveAffine> {

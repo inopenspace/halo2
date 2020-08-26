@@ -1,7 +1,28 @@
-use super::{hash_point, Proof, SRS};
+use super::{hash_point, Error, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
-use crate::polycommit::Params;
+use crate::polycommit::{Accumulator, Params};
 use crate::transcript::Hasher;
+
+/// TODO: documentation.
+#[derive(Debug)]
+pub struct Deferred<F: Field> {
+    /// TODO: documentation. comes from circuit
+    pub x: F,
+    /// TODO: documentation. enforced to equal old Accumulator
+    pub y_old: F,
+    /// TODO: documentation. comes from circuit
+    pub y_cur: F,
+    /// TODO: documentation. comes from circuit
+    pub y_new: F,
+    /// TODO: documentation. enforced to equal old Accumulator
+    pub challenges_sq_packed_old: Vec<F>,
+    /// TODO: documentation. fed to circuit
+    pub gx_old_opening: F,
+    /// TODO: documentation. comes from circuit
+    pub challenges_sq_packed_new: Vec<F>,
+    /// TODO: documentation. fed to circuit
+    pub b: F,
+}
 
 impl<C: CurveAffine> Proof<C> {
     /// Returns
@@ -9,7 +30,8 @@ impl<C: CurveAffine> Proof<C> {
         &self,
         params: &Params<C>,
         srs: &SRS<C>,
-    ) -> bool {
+        old_accumulator: Accumulator<C>,
+    ) -> Result<(bool, Accumulator<C>, Deferred<C::Scalar>), Error> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
@@ -99,15 +121,31 @@ impl<C: CurveAffine> Proof<C> {
             - &(self.c_eval_x * &self.sc_eval_x)
             != h_eval_x * &(xn - &C::Scalar::one())
         {
-            return false;
+            return Err(Error::ConstraintSystemFailure);
         }
 
-        params.verify_proof(
-            &self.opening,
-            &mut transcript,
-            x,
-            &q_commitment,
-            expected_opening,
-        )
+        Ok((
+            params.verify_proof(
+                &self.opening,
+                &mut transcript,
+                x,
+                &q_commitment,
+                expected_opening,
+            ),
+            Accumulator {
+                g_new: Vec::with_capacity(1),
+                challenges_sq_packed_new: [C::Scalar::zero()].to_vec(),
+            },
+            Deferred {
+                x: C::Scalar::zero(),
+                y_old: C::Scalar::zero(),
+                y_cur: C::Scalar::zero(),
+                y_new: C::Scalar::zero(),
+                challenges_sq_packed_old: [C::Scalar::zero()].to_vec(),
+                gx_old_opening: C::Scalar::zero(),
+                challenges_sq_packed_new: [C::Scalar::zero()].to_vec(),
+                b: C::Scalar::zero(),
+            },
+        ))
     }
 }

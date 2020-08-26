@@ -6,7 +6,7 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::polycommit::OpeningProof;
+use crate::polycommit::{Accumulator, OpeningProof};
 use crate::transcript::Hasher;
 
 #[macro_use]
@@ -227,5 +227,12 @@ fn test_proving() {
     let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
         .expect("proof generation should not fail");
 
-    assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs));
+    // Dummy accumulator
+    let accumulator = Accumulator {
+        g_new: Vec::with_capacity(1),
+        challenges_sq_packed_new: [Fp::zero()].to_vec(),
+    };
+    let verify = proof
+        .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, accumulator)
+        .expect("proof verification should not fail");
 }
